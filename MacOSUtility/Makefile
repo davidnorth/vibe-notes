@@ -7,7 +7,7 @@ APP_BUNDLE = $(APP_NAME).app
 APP_EXECUTABLE = $(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)
 APP_PLIST = $(APP_BUNDLE)/Contents/Info.plist
 
-SOURCES = main.m AppDelegate.m SettingsWindowController.m
+SOURCES = main.m AppDelegate.m SettingsWindowController.m Note.m
 
 all: $(APP_BUNDLE)
 

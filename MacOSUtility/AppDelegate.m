@@ -1,4 +1,5 @@
 #import "AppDelegate.h"
+#import "Note.h"
 #import "SettingsWindowController.h"
 
 @implementation AppDelegate
@@ -183,6 +184,73 @@
            forKey:@"NotesDirectory"];
     [[NSUserDefaults standardUserDefaults] synchronize];
   }
+
+  [self loadNotes];
+}
+
+- (void)loadNotes {
+  NSString *path =
+      [[NSUserDefaults standardUserDefaults] stringForKey:@"NotesDirectory"];
+
+  dispatch_async(
+      dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSMutableArray *notes = [NSMutableArray array];
+        NSFileManager *fm = [NSFileManager defaultManager];
+        NSArray *files = [fm contentsOfDirectoryAtPath:path error:nil];
+
+        for (NSString *file in files) {
+          if ([file.pathExtension isEqualToString:@"txt"]) {
+            NSString *fullPath = [path stringByAppendingPathComponent:file];
+            Note *note = [[Note alloc] initWithFilePath:fullPath];
+            [notes addObject:note];
+          }
+        }
+
+        dispatch_async(dispatch_get_main_queue(), ^{
+          self.allNotes = notes;
+          self.filteredNotes = notes;
+          [self.tableView reloadData];
+        });
+      });
+}
+
+- (void)controlTextDidChange:(NSNotification *)obj {
+  NSString *searchString = [self.inputField stringValue];
+
+  if (searchString.length == 0) {
+    self.filteredNotes = self.allNotes;
+  } else {
+    NSPredicate *predicate = [NSPredicate predicateWithBlock:^BOOL(
+                                              Note *evaluatedObject,
+                                              NSDictionary *bindings) {
+      return ([evaluatedObject.name rangeOfString:searchString
+                                          options:NSCaseInsensitiveSearch]
+                  .location != NSNotFound) ||
+             ([evaluatedObject.content rangeOfString:searchString
+                                             options:NSCaseInsensitiveSearch]
+                  .location != NSNotFound);
+    }];
+    self.filteredNotes = [self.allNotes filteredArrayUsingPredicate:predicate];
+  }
+
+  [self.tableView reloadData];
+
+  // If we have results, select the first one automatically (optional, but nice
+  // for NV feel)
+  if (self.filteredNotes.count > 0) {
+    [self.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0]
+                byExtendingSelection:NO];
+  }
+}
+
+- (void)tableViewSelectionDidChange:(NSNotification *)notification {
+  NSInteger row = [self.tableView selectedRow];
+  if (row >= 0 && row < self.filteredNotes.count) {
+    Note *note = self.filteredNotes[row];
+    [self.textView setString:note.content];
+  } else {
+    [self.textView setString:@""];
+  }
 }
 
 - (void)showPreferences:(id)sender {
@@ -201,16 +269,17 @@
 #pragma mark - NSTableViewDataSource
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView {
-  return 5; // Dummy data
+  return self.filteredNotes.count;
 }
 
 - (id)tableView:(NSTableView *)tableView
     objectValueForTableColumn:(NSTableColumn *)tableColumn
                           row:(NSInteger)row {
+  Note *note = self.filteredNotes[row];
   if ([tableColumn.identifier isEqualToString:@"Name"]) {
-    return [NSString stringWithFormat:@"Item %ld", (long)row];
+    return note.name;
   } else {
-    return [NSDate date];
+    return note.dateModified;
   }
 }
 
