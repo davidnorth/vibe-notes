@@ -144,6 +144,22 @@
 
   textScrollView.documentView = self.textView;
 
+  // Empty state label
+  self.emptyStateLabel =
+      [[NSTextField alloc] initWithFrame:textScrollView.bounds];
+  [self.emptyStateLabel setStringValue:@"No note selected"];
+  [self.emptyStateLabel setBezeled:NO];
+  [self.emptyStateLabel setDrawsBackground:NO];
+  [self.emptyStateLabel setEditable:NO];
+  [self.emptyStateLabel setSelectable:NO];
+  [self.emptyStateLabel setAlignment:NSTextAlignmentCenter];
+  [self.emptyStateLabel setTextColor:[NSColor colorWithWhite:0.7 alpha:1.0]];
+  [self.emptyStateLabel
+      setFont:[NSFont systemFontOfSize:[NSFont systemFontSize] + 4.0]];
+  [self.emptyStateLabel
+      setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+  [textScrollView addSubview:self.emptyStateLabel];
+
   // 4. Split View
   self.splitView =
       [[NSSplitView alloc] initWithFrame:NSMakeRect(0, 0, 400, 450)];
@@ -275,6 +291,7 @@
   if (row >= 0 && row < self.filteredNotes.count) {
     Note *note = self.filteredNotes[row];
     [self.textView setString:note.content];
+    [self.emptyStateLabel setHidden:YES];
 
     // Sync search field with note name (but not during programmatic selection
     // from search)
@@ -283,6 +300,7 @@
     }
   } else {
     [self.textView setString:@""];
+    [self.emptyStateLabel setHidden:NO];
   }
 }
 
@@ -328,9 +346,51 @@
                     byExtendingSelection:NO];
       }
       return YES;
+    } else if (commandSelector == @selector(insertNewline:)) {
+      // Create new note if no results
+      if (self.filteredNotes.count == 0) {
+        NSString *noteName = [self.inputField stringValue];
+        if (noteName.length > 0) {
+          [self createNoteWithName:noteName];
+        }
+        return YES;
+      }
     }
   }
   return NO;
+}
+
+- (void)createNoteWithName:(NSString *)name {
+  NSString *notesDir =
+      [[NSUserDefaults standardUserDefaults] stringForKey:@"NotesDirectory"];
+  NSString *filePath = [notesDir
+      stringByAppendingPathComponent:[NSString
+                                         stringWithFormat:@"%@.txt", name]];
+
+  // Create empty file
+  [@"" writeToFile:filePath
+        atomically:YES
+          encoding:NSUTF8StringEncoding
+             error:nil];
+
+  // Create Note object
+  Note *newNote = [[Note alloc] initWithFilePath:filePath];
+
+  // Add to allNotes
+  NSMutableArray *updatedNotes = [self.allNotes mutableCopy];
+  [updatedNotes addObject:newNote];
+  self.allNotes = updatedNotes;
+
+  // Update filtered notes to include the new note
+  self.filteredNotes = @[ newNote ];
+
+  // Reload table and select the new note
+  [self.tableView reloadData];
+  [self.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0]
+              byExtendingSelection:NO];
+
+  // Focus the editor
+  [self.window makeFirstResponder:self.textView];
 }
 
 #pragma mark - NSSplitViewDelegate

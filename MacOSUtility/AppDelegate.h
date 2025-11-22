@@ -14,6 +14,7 @@
 @property(strong) NSArray *filteredNotes;
 
 @property(nonatomic) BOOL isUpdatingSearchProgrammatically;
+@property(strong) NSTextField *emptyStateLabel;
 
 - (void)setupMenu;
 
