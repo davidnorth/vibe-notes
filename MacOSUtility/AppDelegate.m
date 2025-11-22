@@ -105,7 +105,7 @@
   self.tableView.delegate = self;
   self.tableView.usesAlternatingRowBackgroundColors = YES;
   self.tableView.columnAutoresizingStyle =
-      NSTableViewUniformColumnAutoresizingStyle;
+      NSTableViewFirstColumnOnlyAutoresizingStyle;
 
   // Column 1: Name
   NSTableColumn *nameCol = [[NSTableColumn alloc] initWithIdentifier:@"Name"];
@@ -118,6 +118,10 @@
   dateCol.title = @"Date Modified";
   dateCol.width = 150;
   [self.tableView addTableColumn:dateCol];
+
+  // Setup date formatter
+  self.dateFormatter = [[NSDateFormatter alloc] init];
+  [self.dateFormatter setDateFormat:@"dd MMM yyyy 'at' HH:mm"];
 
   tableScrollView.documentView = self.tableView;
 
@@ -145,8 +149,7 @@
   textScrollView.documentView = self.textView;
 
   // Empty state label
-  self.emptyStateLabel =
-      [[NSTextField alloc] initWithFrame:textScrollView.bounds];
+  self.emptyStateLabel = [[NSTextField alloc] initWithFrame:NSZeroRect];
   [self.emptyStateLabel setStringValue:@"No note selected"];
   [self.emptyStateLabel setBezeled:NO];
   [self.emptyStateLabel setDrawsBackground:NO];
@@ -156,9 +159,17 @@
   [self.emptyStateLabel setTextColor:[NSColor colorWithWhite:0.7 alpha:1.0]];
   [self.emptyStateLabel
       setFont:[NSFont systemFontOfSize:[NSFont systemFontSize] + 4.0]];
-  [self.emptyStateLabel
-      setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+  [self.emptyStateLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
   [textScrollView addSubview:self.emptyStateLabel];
+
+  // Center the empty state label
+  [NSLayoutConstraint activateConstraints:@[
+    [self.emptyStateLabel.centerXAnchor
+        constraintEqualToAnchor:textScrollView.centerXAnchor],
+    [self.emptyStateLabel.centerYAnchor
+        constraintEqualToAnchor:textScrollView.centerYAnchor],
+    [self.emptyStateLabel.widthAnchor constraintEqualToConstant:300]
+  ]];
 
   // 4. Split View
   self.splitView =
@@ -208,7 +219,10 @@
   // Force layout to ensure we have a valid frame
   [self.window layoutIfNeeded];
 
-  // Ensure the split position is set correctly
+  // Force table to size its columns properly
+  [self.tableView sizeToFit];
+
+  // Set the initial position of the dividerrectly
   [self.splitView setPosition:150 ofDividerAtIndex:0];
 
   // Configure Key View Loop
@@ -379,7 +393,7 @@
   if ([tableColumn.identifier isEqualToString:@"Name"]) {
     return note.name;
   } else {
-    return note.dateModified;
+    return [self.dateFormatter stringFromDate:note.dateModified];
   }
 }
 

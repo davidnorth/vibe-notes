@@ -19,6 +19,7 @@
 @property(strong) NSTextField *emptyStateLabel;
 @property(strong) NSTimer *saveTimer;
 @property(strong) Note *currentNote;
+@property(strong) NSDateFormatter *dateFormatter;
 
 - (void)setupMenu;
 
