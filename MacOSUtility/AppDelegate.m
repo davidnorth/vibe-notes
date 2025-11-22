@@ -106,17 +106,31 @@
   self.tableView.usesAlternatingRowBackgroundColors = YES;
   self.tableView.columnAutoresizingStyle =
       NSTableViewFirstColumnOnlyAutoresizingStyle;
+  self.tableView.style = NSTableViewStylePlain;       // Remove rounded corners
+  self.tableView.intercellSpacing = NSMakeSize(0, 0); // Remove spacing
+  self.tableView.rowHeight =
+      20; // Adjust row height for better vertical centering
+
+  // Create paragraph style for header indentation
+  NSMutableParagraphStyle *headerStyle = [[NSMutableParagraphStyle alloc] init];
+  [headerStyle setFirstLineHeadIndent:8.0];
 
   // Column 1: Name
   NSTableColumn *nameCol = [[NSTableColumn alloc] initWithIdentifier:@"Name"];
-  nameCol.title = @"Name";
   nameCol.width = 200;
+  NSAttributedString *nameTitle = [[NSAttributedString alloc]
+      initWithString:@"Name"
+          attributes:@{NSParagraphStyleAttributeName : headerStyle}];
+  [nameCol.headerCell setAttributedStringValue:nameTitle];
   [self.tableView addTableColumn:nameCol];
 
   // Column 2: Date Modified
   NSTableColumn *dateCol = [[NSTableColumn alloc] initWithIdentifier:@"Date"];
-  dateCol.title = @"Date Modified";
   dateCol.width = 150;
+  NSAttributedString *dateTitle = [[NSAttributedString alloc]
+      initWithString:@"Date Modified"
+          attributes:@{NSParagraphStyleAttributeName : headerStyle}];
+  [dateCol.headerCell setAttributedStringValue:dateTitle];
   [self.tableView addTableColumn:dateCol];
 
   // Setup date formatter
@@ -395,6 +409,51 @@
   } else {
     return [self.dateFormatter stringFromDate:note.dateModified];
   }
+}
+
+- (NSView *)tableView:(NSTableView *)tableView
+    viewForTableColumn:(NSTableColumn *)tableColumn
+                   row:(NSInteger)row {
+  NSView *containerView =
+      [tableView makeViewWithIdentifier:tableColumn.identifier owner:self];
+
+  if (containerView == nil) {
+    containerView = [[NSView alloc] initWithFrame:NSZeroRect];
+    containerView.identifier = tableColumn.identifier;
+
+    NSTextField *textField = [[NSTextField alloc] initWithFrame:NSZeroRect];
+    textField.bordered = NO;
+    textField.backgroundColor = [NSColor clearColor];
+    textField.editable = NO;
+    textField.selectable = NO;
+    textField.translatesAutoresizingMaskIntoConstraints = NO;
+    [[textField cell] setLineBreakMode:NSLineBreakByTruncatingTail];
+    [textField setMaximumNumberOfLines:1];
+    [containerView addSubview:textField];
+
+    // Add constraints for padding
+    [NSLayoutConstraint activateConstraints:@[
+      [textField.leadingAnchor
+          constraintEqualToAnchor:containerView.leadingAnchor
+                         constant:8],
+      [textField.trailingAnchor
+          constraintEqualToAnchor:containerView.trailingAnchor
+                         constant:-8],
+      [textField.centerYAnchor
+          constraintEqualToAnchor:containerView.centerYAnchor]
+    ]];
+  }
+
+  NSTextField *textField = (NSTextField *)containerView.subviews.firstObject;
+  Note *note = self.filteredNotes[row];
+  if ([tableColumn.identifier isEqualToString:@"Name"]) {
+    textField.stringValue = note.name;
+  } else {
+    textField.stringValue =
+        [self.dateFormatter stringFromDate:note.dateModified];
+  }
+
+  return containerView;
 }
 
 - (BOOL)control:(NSControl *)control
