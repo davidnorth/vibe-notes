@@ -1,4 +1,5 @@
 #import "AppDelegate.h"
+#import "SettingsWindowController.h"
 
 @implementation AppDelegate
 
@@ -10,6 +11,17 @@
 
   NSMenu *appMenu = [[NSMenu alloc] init];
   NSString *appName = [[NSProcessInfo processInfo] processName];
+
+  // Preferences
+  NSMenuItem *prefMenuItem =
+      [[NSMenuItem alloc] initWithTitle:@"Preferences..."
+                                 action:@selector(showPreferences:)
+                          keyEquivalent:@","];
+  [appMenu addItem:prefMenuItem];
+
+  [appMenu addItem:[NSMenuItem separatorItem]];
+
+  // Quit
   NSString *quitTitle = [@"Quit " stringByAppendingString:appName];
   NSMenuItem *quitMenuItem =
       [[NSMenuItem alloc] initWithTitle:quitTitle
@@ -17,6 +29,20 @@
                           keyEquivalent:@"q"];
   [appMenu addItem:quitMenuItem];
   [appMenuItem setSubmenu:appMenu];
+
+  // Edit Menu (for Focus Search)
+  NSMenuItem *editMenuItem = [[NSMenuItem alloc] init];
+  [menubar addItem:editMenuItem];
+  NSMenu *editMenu = [[NSMenu alloc] initWithTitle:@"Edit"];
+
+  // Standard Edit items (Cut/Copy/Paste) are handled automatically by responder
+  // chain if we add them, but for now we just want Focus Search
+  NSMenuItem *focusSearchItem =
+      [[NSMenuItem alloc] initWithTitle:@"Focus Search"
+                                 action:@selector(focusSearch:)
+                          keyEquivalent:@"l"];
+  [editMenu addItem:focusSearchItem];
+  [editMenuItem setSubmenu:editMenu];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
@@ -142,6 +168,29 @@
 
   // Ensure the split position is set correctly
   [self.splitView setPosition:150 ofDividerAtIndex:0];
+
+  // Configure Key View Loop
+  [self.inputField setNextKeyView:self.textView];
+  [self.textView setNextKeyView:self.inputField];
+
+  // Set initial focus
+  [self.window makeFirstResponder:self.inputField];
+
+  // Check/Set Default Preferences
+  if (![[NSUserDefaults standardUserDefaults] stringForKey:@"NotesDirectory"]) {
+    [[NSUserDefaults standardUserDefaults]
+        setObject:[@"~/Documents/notes" stringByExpandingTildeInPath]
+           forKey:@"NotesDirectory"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+  }
+}
+
+- (void)showPreferences:(id)sender {
+  [[SettingsWindowController sharedSettingsController] showSettings:sender];
+}
+
+- (void)focusSearch:(id)sender {
+  [self.window makeFirstResponder:self.inputField];
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:
