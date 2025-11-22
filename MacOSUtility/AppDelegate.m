@@ -218,6 +218,12 @@
   // Set initial focus
   [self.window makeFirstResponder:self.inputField];
 
+  // Observe text changes for auto-save
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(textDidChange:)
+                                               name:NSTextDidChangeNotification
+                                             object:self.textView];
+
   // Check/Set Default Preferences
   if (![[NSUserDefaults standardUserDefaults] stringForKey:@"NotesDirectory"]) {
     [[NSUserDefaults standardUserDefaults]
@@ -283,6 +289,13 @@
     [self.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0]
                 byExtendingSelection:NO];
     self.isUpdatingSearchProgrammatically = NO;
+
+    // Manually load the first note's content since selection change won't
+    // update search field
+    Note *firstNote = self.filteredNotes[0];
+    self.currentNote = firstNote;
+    [self.textView setString:firstNote.content];
+    [self.emptyStateLabel setHidden:YES];
   }
 }
 
@@ -290,6 +303,7 @@
   NSInteger row = [self.tableView selectedRow];
   if (row >= 0 && row < self.filteredNotes.count) {
     Note *note = self.filteredNotes[row];
+    self.currentNote = note;
     [self.textView setString:note.content];
     [self.emptyStateLabel setHidden:YES];
 
@@ -299,6 +313,7 @@
       [self.inputField setStringValue:note.name];
     }
   } else {
+    self.currentNote = nil;
     [self.textView setString:@""];
     [self.emptyStateLabel setHidden:NO];
   }
@@ -310,6 +325,40 @@
 
 - (void)focusSearch:(id)sender {
   [self.window makeFirstResponder:self.inputField];
+}
+
+- (void)textDidChange:(NSNotification *)notification {
+  // Cancel existing timer
+  [self.saveTimer invalidate];
+
+  // Schedule save after 0.5 seconds of inactivity
+  self.saveTimer =
+      [NSTimer scheduledTimerWithTimeInterval:0.5
+                                       target:self
+                                     selector:@selector(saveCurrentNote)
+                                     userInfo:nil
+                                      repeats:NO];
+}
+
+- (void)saveCurrentNote {
+  if (!self.currentNote)
+    return;
+
+  NSString *content = [self.textView string];
+  NSError *error = nil;
+
+  // Update note content in memory
+  self.currentNote.content = content;
+
+  // Write to file
+  [content writeToFile:self.currentNote.filePath
+            atomically:YES
+              encoding:NSUTF8StringEncoding
+                 error:&error];
+
+  if (error) {
+    NSLog(@"Error saving note: %@", error);
+  }
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:
