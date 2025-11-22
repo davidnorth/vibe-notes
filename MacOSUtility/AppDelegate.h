@@ -1,7 +1,8 @@
 #import <Cocoa/Cocoa.h>
 
-@interface AppDelegate : NSObject <NSApplicationDelegate, NSTableViewDataSource,
-                                   NSTableViewDelegate, NSSplitViewDelegate>
+@interface AppDelegate
+    : NSObject <NSApplicationDelegate, NSTableViewDataSource,
+                NSTableViewDelegate, NSSplitViewDelegate, NSSearchFieldDelegate>
 
 @property(strong, nonatomic) NSWindow *window;
 @property(strong) NSSearchField *inputField;

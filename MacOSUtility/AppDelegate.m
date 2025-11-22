@@ -31,13 +31,30 @@
   [appMenu addItem:quitMenuItem];
   [appMenuItem setSubmenu:appMenu];
 
-  // Edit Menu (for Focus Search)
+  // Edit Menu
   NSMenuItem *editMenuItem = [[NSMenuItem alloc] init];
   [menubar addItem:editMenuItem];
   NSMenu *editMenu = [[NSMenu alloc] initWithTitle:@"Edit"];
 
-  // Standard Edit items (Cut/Copy/Paste) are handled automatically by responder
-  // chain if we add them, but for now we just want Focus Search
+  [editMenu addItemWithTitle:@"Undo"
+                      action:@selector(undo:)
+               keyEquivalent:@"z"];
+  [editMenu addItemWithTitle:@"Redo"
+                      action:@selector(redo:)
+               keyEquivalent:@"Z"];
+  [editMenu addItem:[NSMenuItem separatorItem]];
+  [editMenu addItemWithTitle:@"Cut" action:@selector(cut:) keyEquivalent:@"x"];
+  [editMenu addItemWithTitle:@"Copy"
+                      action:@selector(copy:)
+               keyEquivalent:@"c"];
+  [editMenu addItemWithTitle:@"Paste"
+                      action:@selector(paste:)
+               keyEquivalent:@"v"];
+  [editMenu addItemWithTitle:@"Select All"
+                      action:@selector(selectAll:)
+               keyEquivalent:@"a"];
+  [editMenu addItem:[NSMenuItem separatorItem]];
+
   NSMenuItem *focusSearchItem =
       [[NSMenuItem alloc] initWithTitle:@"Focus Search"
                                  action:@selector(focusSearch:)
@@ -71,6 +88,7 @@
   self.inputField = [[NSSearchField alloc] init];
   self.inputField.placeholderString = @"Search...";
   self.inputField.translatesAutoresizingMaskIntoConstraints = NO;
+  self.inputField.delegate = self; // Fix: Set delegate
   [contentView addSubview:self.inputField];
 
   // 2. Scrollable table with 2 cols
@@ -281,6 +299,23 @@
   } else {
     return note.dateModified;
   }
+}
+
+- (BOOL)control:(NSControl *)control
+               textView:(NSTextView *)textView
+    doCommandBySelector:(SEL)commandSelector {
+  if (control == self.inputField) {
+    if (commandSelector == @selector(moveDown:)) {
+      // Move focus to table view and select first row if possible
+      [self.window makeFirstResponder:self.tableView];
+      if (self.tableView.numberOfRows > 0) {
+        [self.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0]
+                    byExtendingSelection:NO];
+      }
+      return YES;
+    }
+  }
+  return NO;
 }
 
 #pragma mark - NSSplitViewDelegate
