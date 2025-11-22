@@ -13,6 +13,8 @@
 @property(strong) NSArray *allNotes;
 @property(strong) NSArray *filteredNotes;
 
+@property(nonatomic) BOOL isUpdatingSearchProgrammatically;
+
 - (void)setupMenu;
 
 @end

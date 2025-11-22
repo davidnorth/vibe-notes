@@ -136,12 +136,19 @@
   self.textView.textContainer.containerSize = NSMakeSize(100, FLT_MAX);
   self.textView.textContainer.widthTracksTextView = YES;
 
+  // UI Polish: Font, Padding, Undo
+  [self.textView
+      setFont:[NSFont systemFontOfSize:[NSFont systemFontSize] + 2.0]];
+  [self.textView setTextContainerInset:NSMakeSize(5, 5)];
+  [self.textView setAllowsUndo:YES];
+
   textScrollView.documentView = self.textView;
 
   // 4. Split View
   self.splitView =
       [[NSSplitView alloc] initWithFrame:NSMakeRect(0, 0, 400, 450)];
-  self.splitView.dividerStyle = NSSplitViewDividerStyleThin;
+  self.splitView.dividerStyle =
+      NSSplitViewDividerStylePaneSplitter; // Thicker divider
   self.splitView.vertical =
       NO; // Horizontal dividers (items stacked vertically)
   self.splitView.delegate = self; // Set delegate to control sizing
@@ -256,8 +263,10 @@
   // If we have results, select the first one automatically (optional, but nice
   // for NV feel)
   if (self.filteredNotes.count > 0) {
+    self.isUpdatingSearchProgrammatically = YES;
     [self.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0]
                 byExtendingSelection:NO];
+    self.isUpdatingSearchProgrammatically = NO;
   }
 }
 
@@ -266,6 +275,12 @@
   if (row >= 0 && row < self.filteredNotes.count) {
     Note *note = self.filteredNotes[row];
     [self.textView setString:note.content];
+
+    // Sync search field with note name (but not during programmatic selection
+    // from search)
+    if (!self.isUpdatingSearchProgrammatically) {
+      [self.inputField setStringValue:note.name];
+    }
   } else {
     [self.textView setString:@""];
   }
