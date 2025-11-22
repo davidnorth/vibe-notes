@@ -55,6 +55,15 @@
                keyEquivalent:@"a"];
   [editMenu addItem:[NSMenuItem separatorItem]];
 
+  NSMenuItem *deleteItem =
+      [[NSMenuItem alloc] initWithTitle:@"Delete Note"
+                                 action:@selector(deleteNote:)
+                          keyEquivalent:@"\b"];
+  [deleteItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
+  [editMenu addItem:deleteItem];
+
+  [editMenu addItem:[NSMenuItem separatorItem]];
+
   NSMenuItem *focusSearchItem =
       [[NSMenuItem alloc] initWithTitle:@"Focus Search"
                                  action:@selector(focusSearch:)
@@ -392,6 +401,65 @@
   if (error) {
     NSLog(@"Error saving note: %@", error);
   }
+}
+
+- (void)deleteNote:(id)sender {
+  if (!self.currentNote)
+    return;
+
+  NSAlert *alert = [[NSAlert alloc] init];
+  [alert setMessageText:@"Delete Note?"];
+  [alert setInformativeText:
+             [NSString stringWithFormat:@"Are you sure you want to delete "
+                                        @"\"%@\"? This cannot be undone.",
+                                        self.currentNote.name]];
+  [alert addButtonWithTitle:@"Delete"];
+  [alert addButtonWithTitle:@"Cancel"];
+  [alert setAlertStyle:NSAlertStyleCritical];
+
+  [alert
+      beginSheetModalForWindow:self.window
+             completionHandler:^(NSModalResponse returnCode) {
+               if (returnCode == NSAlertFirstButtonReturn) {
+                 // User clicked Delete
+                 NSError *error = nil;
+                 [[NSFileManager defaultManager]
+                     removeItemAtPath:self.currentNote.filePath
+                                error:&error];
+
+                 if (error) {
+                   NSAlert *errorAlert = [[NSAlert alloc] init];
+                   [errorAlert setMessageText:@"Error Deleting Note"];
+                   [errorAlert setInformativeText:[error localizedDescription]];
+                   [errorAlert runModal];
+                 } else {
+                   // Remove from arrays
+                   NSMutableArray *updatedAllNotes =
+                       [self.allNotes mutableCopy];
+                   [updatedAllNotes removeObject:self.currentNote];
+                   self.allNotes = updatedAllNotes;
+
+                   NSMutableArray *updatedFilteredNotes =
+                       [self.filteredNotes mutableCopy];
+                   [updatedFilteredNotes removeObject:self.currentNote];
+                   self.filteredNotes = updatedFilteredNotes;
+
+                   // Update UI
+                   self.currentNote = nil;
+                   [self.textView setString:@""];
+                   [self.tableView reloadData];
+
+                   // Try to select the next note or previous note
+                   if (self.filteredNotes.count > 0) {
+                     [self.tableView
+                             selectRowIndexes:[NSIndexSet indexSetWithIndex:0]
+                         byExtendingSelection:NO];
+                   } else {
+                     [self.emptyStateLabel setHidden:NO];
+                   }
+                 }
+               }
+             }];
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:
