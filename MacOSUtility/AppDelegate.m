@@ -73,16 +73,37 @@
                                             styleMask:styleMask
                                               backing:NSBackingStoreBuffered
                                                 defer:NO];
-  [self.window setTitle:@"MacOS Utility"];
+  [self.window setTitle:@"VibeNote"];
   [self.window center];
   [self.window makeKeyAndOrderFront:nil];
   [NSApp activateIgnoringOtherApps:YES];
 
   [self setupMenu];
+  [self setupUserInterface];
 
-  // Create a main container view (standard NSView)
-  NSView *contentView = [[NSView alloc] initWithFrame:frame];
-  self.window.contentView = contentView;
+  // Observe text changes for auto-save
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(textDidChange:)
+                                               name:NSTextDidChangeNotification
+                                             object:self.textView];
+
+  // Check/Set Default Preferences
+  if (![[NSUserDefaults standardUserDefaults] stringForKey:@"NotesDirectory"]) {
+    [[NSUserDefaults standardUserDefaults]
+        setObject:[@"~/Documents/notes" stringByExpandingTildeInPath]
+           forKey:@"NotesDirectory"];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+  }
+
+  [self loadNotes];
+}
+
+- (void)setupUserInterface {
+  NSView *contentView = self.window.contentView;
+  if (!contentView) {
+    contentView = [[NSView alloc] initWithFrame:self.window.contentView.frame];
+    self.window.contentView = contentView;
+  }
 
   // 1. Search Field (Input)
   self.inputField = [[NSSearchField alloc] init];
@@ -245,22 +266,6 @@
 
   // Set initial focus
   [self.window makeFirstResponder:self.inputField];
-
-  // Observe text changes for auto-save
-  [[NSNotificationCenter defaultCenter] addObserver:self
-                                           selector:@selector(textDidChange:)
-                                               name:NSTextDidChangeNotification
-                                             object:self.textView];
-
-  // Check/Set Default Preferences
-  if (![[NSUserDefaults standardUserDefaults] stringForKey:@"NotesDirectory"]) {
-    [[NSUserDefaults standardUserDefaults]
-        setObject:[@"~/Documents/notes" stringByExpandingTildeInPath]
-           forKey:@"NotesDirectory"];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-  }
-
-  [self loadNotes];
 }
 
 - (void)loadNotes {

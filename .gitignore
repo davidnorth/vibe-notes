@@ -1,4 +1,4 @@
 nv
 .DS_Store
 TODO.txt
-MacOSUtility/MacOSUtility.app/
+*.app

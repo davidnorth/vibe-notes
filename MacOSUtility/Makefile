@@ -2,22 +2,19 @@ CC = clang
 CFLAGS = -fobjc-arc -Wall -Werror
 LDFLAGS = -framework Cocoa
 
-APP_NAME = MacOSUtility
-APP_BUNDLE = $(APP_NAME).app
-APP_EXECUTABLE = $(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)
-APP_PLIST = $(APP_BUNDLE)/Contents/Info.plist
-
+APP_NAME = VibeNote
 SOURCES = main.m AppDelegate.m SettingsWindowController.m Note.m
+RESOURCES = Info.plist
 
-all: $(APP_BUNDLE)
+all: $(APP_NAME).app
 
-$(APP_BUNDLE): $(SOURCES) Info.plist
-	@mkdir -p $(APP_BUNDLE)/Contents/MacOS
-	@mkdir -p $(APP_BUNDLE)/Contents/Resources
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $(APP_EXECUTABLE) $(SOURCES)
-	cp Info.plist $(APP_PLIST)
-	@echo "Built $(APP_BUNDLE)"
+$(APP_NAME).app: $(SOURCES) $(RESOURCES)
+	rm -rf $(APP_NAME).app
+	mkdir -p $(APP_NAME).app/Contents/MacOS
+	mkdir -p $(APP_NAME).app/Contents/Resources
+	clang -fobjc-arc -Wall -Werror -framework Cocoa -o $(APP_NAME).app/Contents/MacOS/$(APP_NAME) $(SOURCES)
+	cp Info.plist $(APP_NAME).app/Contents/Info.plist
+	@echo "Built $(APP_NAME).app"
 
 clean:
-	rm -rf $(APP_BUNDLE)
-
+	rm -rf $(APP_NAME).app
