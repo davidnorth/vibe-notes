@@ -542,8 +542,14 @@
       }
       return YES;
     } else if (commandSelector == @selector(insertNewline:)) {
-      // Create new note if no results
-      if (self.filteredNotes.count == 0) {
+      if (self.filteredNotes.count > 0) {
+        // If results exist, select the first one and focus the editor
+        [self.tableView selectRowIndexes:[NSIndexSet indexSetWithIndex:0]
+                    byExtendingSelection:NO];
+        [self.window makeFirstResponder:self.textView];
+        return YES;
+      } else {
+        // Create new note if no results
         NSString *noteName = [self.inputField stringValue];
         if (noteName.length > 0) {
           [self createNoteWithName:noteName];
