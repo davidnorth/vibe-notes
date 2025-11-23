@@ -170,10 +170,17 @@
   tableScrollView.documentView = self.tableView;
 
   // 3. Text area filling the rest of the space
+  // Create a container for the bottom part (Text + Empty State)
+  NSView *bottomContainerView =
+      [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)];
+  bottomContainerView.translatesAutoresizingMaskIntoConstraints = NO;
+
   NSScrollView *textScrollView =
-      [[NSScrollView alloc] initWithFrame:NSMakeRect(0, 0, 400, 300)];
+      [[NSScrollView alloc] initWithFrame:bottomContainerView.bounds];
   textScrollView.hasVerticalScroller = YES;
   textScrollView.borderType = NSNoBorder; // No border
+  textScrollView.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+  [bottomContainerView addSubview:textScrollView];
 
   self.textView = [[NSTextView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100)];
   self.textView.minSize = NSMakeSize(0.0, 0.0);
@@ -204,14 +211,14 @@
   [self.emptyStateLabel
       setFont:[NSFont systemFontOfSize:[NSFont systemFontSize] + 4.0]];
   [self.emptyStateLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
-  [textScrollView addSubview:self.emptyStateLabel];
+  [bottomContainerView addSubview:self.emptyStateLabel];
 
   // Center the empty state label
   [NSLayoutConstraint activateConstraints:@[
     [self.emptyStateLabel.centerXAnchor
-        constraintEqualToAnchor:textScrollView.centerXAnchor],
+        constraintEqualToAnchor:bottomContainerView.centerXAnchor],
     [self.emptyStateLabel.centerYAnchor
-        constraintEqualToAnchor:textScrollView.centerYAnchor],
+        constraintEqualToAnchor:bottomContainerView.centerYAnchor],
     [self.emptyStateLabel.widthAnchor constraintEqualToConstant:300]
   ]];
 
@@ -225,7 +232,8 @@
   self.splitView.delegate = self; // Set delegate to control sizing
   self.splitView.translatesAutoresizingMaskIntoConstraints = NO;
   [self.splitView addSubview:tableScrollView];
-  [self.splitView addSubview:textScrollView];
+  [self.splitView
+      addSubview:bottomContainerView]; // Add container instead of scrollview
 
   // Holding priority: Table View should hold its size (250), Text View should
   // grow (249) Note: With the delegate method implemented, these might be
@@ -337,7 +345,15 @@
     Note *firstNote = self.filteredNotes[0];
     self.currentNote = firstNote;
     [self.textView setString:firstNote.content];
+    [self.textView setHidden:NO];
     [self.emptyStateLabel setHidden:YES];
+  } else {
+    // No results found
+    self.currentNote = nil;
+    [self.textView setString:@""];
+    [self.textView setHidden:YES];
+    [self.emptyStateLabel setHidden:NO];
+    [self.tableView deselectAll:nil];
   }
 }
 
@@ -347,6 +363,7 @@
     Note *note = self.filteredNotes[row];
     self.currentNote = note;
     [self.textView setString:note.content];
+    [self.textView setHidden:NO];
     [self.emptyStateLabel setHidden:YES];
 
     // Sync search field with note name (but not during programmatic selection
@@ -357,6 +374,7 @@
   } else {
     self.currentNote = nil;
     [self.textView setString:@""];
+    [self.textView setHidden:YES];
     [self.emptyStateLabel setHidden:NO];
   }
 }
