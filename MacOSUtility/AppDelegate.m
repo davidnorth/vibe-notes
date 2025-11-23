@@ -2,6 +2,10 @@
 #import "Note.h"
 #import "SettingsWindowController.h"
 
+@interface AppDelegate ()
+@property(nonatomic, assign) BOOL hasUnsavedChanges;
+@end
+
 @implementation AppDelegate
 
 - (void)setupMenu {
@@ -349,6 +353,12 @@
     [self.emptyStateLabel setHidden:YES];
   } else {
     // No results found
+    [self.saveTimer invalidate];
+    self.saveTimer = nil;
+
+    if (self.currentNote) {
+      [self saveCurrentNote];
+    }
     self.currentNote = nil;
     [self.textView setString:@""];
     [self.textView setHidden:YES];
@@ -358,11 +368,21 @@
 }
 
 - (void)tableViewSelectionDidChange:(NSNotification *)notification {
+  // Cancel any pending auto-save
+  [self.saveTimer invalidate];
+  self.saveTimer = nil;
+
+  // Save the previous note before switching
+  if (self.currentNote) {
+    [self saveCurrentNote];
+  }
+
   NSInteger row = [self.tableView selectedRow];
   if (row >= 0 && row < self.filteredNotes.count) {
     Note *note = self.filteredNotes[row];
     self.currentNote = note;
-    [self.textView setString:note.content];
+    [self.textView setString:note.content ?: @""];
+    self.hasUnsavedChanges = NO; // Reset dirty flag for new note
     [self.textView setHidden:NO];
     [self.emptyStateLabel setHidden:YES];
 
@@ -382,12 +402,13 @@
 - (void)showPreferences:(id)sender {
   [[SettingsWindowController sharedSettingsController] showSettings:sender];
 }
-
 - (void)focusSearch:(id)sender {
   [self.window makeFirstResponder:self.inputField];
 }
 
 - (void)textDidChange:(NSNotification *)notification {
+  self.hasUnsavedChanges = YES;
+
   // Cancel existing timer
   [self.saveTimer invalidate];
 
@@ -401,10 +422,10 @@
 }
 
 - (void)saveCurrentNote {
-  if (!self.currentNote)
+  if (!self.currentNote || !self.hasUnsavedChanges)
     return;
 
-  NSString *content = [self.textView string];
+  NSString *content = [[self.textView string] copy];
   NSError *error = nil;
 
   // Update note content in memory
@@ -418,6 +439,8 @@
 
   if (error) {
     NSLog(@"Error saving note: %@", error);
+  } else {
+    self.hasUnsavedChanges = NO;
   }
 }
 

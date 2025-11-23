@@ -12,13 +12,16 @@
     _content = [NSString stringWithContentsOfFile:path
                                          encoding:NSUTF8StringEncoding
                                             error:&error];
-    if (error) {
-      // Fallback to MacOS Roman if UTF8 fails, or just empty string
+
+    if (!_content) {
+      // Fallback to MacOS Roman if UTF8 fails
       _content = [NSString stringWithContentsOfFile:path
                                            encoding:NSMacOSRomanStringEncoding
                                               error:nil];
-      if (!_content)
-        _content = @"";
+    }
+
+    if (!_content) {
+      _content = @"";
     }
 
     NSDictionary *attrs =
